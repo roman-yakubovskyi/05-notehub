@@ -21,6 +21,10 @@ const initialValuesForm: NoteFormValues = {
 export default function NoteForm({ onClose, currentQuery }: NoteFormProps) {
   const queryClient = useQueryClient();
 
+  const mutationCreateNote = useMutation({
+    mutationFn: createNote,
+  });
+
   const validationSchemaNoteForm = Yup.object({
     title: Yup.string()
       .min(3, 'Title must be at least 3 characters')
@@ -32,31 +36,27 @@ export default function NoteForm({ onClose, currentQuery }: NoteFormProps) {
       .required('Tag is required'),
   });
 
-  const handleSubmit = (
+  const handleSubmit = async (
     values: NoteFormValues,
     actions: FormikHelpers<NoteFormValues>
   ) => {
-    taskCreate(values);
-    actions.resetForm();
-  };
+    try {
+      const data = await mutationCreateNote.mutateAsync(values);
 
-  const mutationCreateNote = useMutation({
-    mutationFn: async (note: NoteFormValues) => {
-      const noteNew = await createNote(note);
-      toast.success(`Created note: ${noteNew.title}`);
-    },
-    onSuccess: () => {
+      toast.success(`Created note: ${data.title}`);
       toast.success(`Create success !`);
-      onClose();
-      queryClient.invalidateQueries({ queryKey: ['notes', currentQuery, 1] });
-    },
-    onError: error => {
-      toast.error(`Created ERROR ${error.message}`);
-    },
-  });
 
-  const taskCreate = (createNote: NoteFormValues) => {
-    mutationCreateNote.mutate(createNote);
+      actions.resetForm();
+      onClose();
+
+      queryClient.invalidateQueries({ queryKey: ['notes', currentQuery, 1] });
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        toast.error(`Created ERROR ${error.message}`);
+      } else {
+        toast.error('Unknown error');
+      }
+    }
   };
 
   return (

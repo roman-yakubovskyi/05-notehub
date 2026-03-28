@@ -8,8 +8,8 @@ import ErrorMessage from '../ErrorMessage/ErrorMessage';
 import Loader from '../Loader/Loader';
 import Modal from '../Modal/Modal';
 import NoteForm from '../NoteForm/NoteForm';
-import { fetchNotes } from '../../services/noteService';
-import { useQuery } from '@tanstack/react-query';
+import { fetchNotes, deleteNote } from '../../services/noteService';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { keepPreviousData } from '@tanstack/react-query';
 import { useDebouncedCallback } from 'use-debounce';
 
@@ -22,20 +22,33 @@ export default function App() {
   const [page, setPage] = useState<number>(1);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 
+  const queryClient = useQueryClient();
+
   const {
     data: dataNotes,
     isLoading,
     isError,
   } = useQuery({
     queryKey: ['notes', query, page],
-
     queryFn: async () => {
       const { notes, totalPages } = await fetchNotes(query, page);
       setTotalPages(totalPages);
       return notes;
     },
-
     placeholderData: keepPreviousData,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteNote,
+    onSuccess: () => {
+      toast.success('Delete success!');
+      queryClient.invalidateQueries({
+        queryKey: ['notes', query, page],
+      });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
   });
 
   useEffect(() => {
@@ -53,30 +66,34 @@ export default function App() {
     localStorage.setItem('query', JSON.stringify(query));
   }, [query]);
 
-  const openModal = () => {
-    setIsModalOpen(true);
-  };
-  const closeModal = () => {
-    setIsModalOpen(false);
-  };
+  const openModal = () => setIsModalOpen(true);
+  const closeModal = () => setIsModalOpen(false);
 
   return (
     <div className={css.app}>
       <header className={css.toolbar}>
         <SearchBox onChangeText={handleSearch} />
+
         {totalPages > 1 && (
           <Pagination totalPages={totalPages} setPage={setPage} page={page} />
         )}
+
         <button className={css.button} onClick={openModal}>
           Create note +
         </button>
       </header>
+
       {dataNotes && dataNotes.length > 0 && (
-        <NoteList notes={dataNotes} currentQuery={query} />
+        <NoteList
+          notes={dataNotes}
+          onDelete={id => deleteMutation.mutate(id)}
+        />
       )}
+
       <Toaster />
       {isError && <ErrorMessage />}
       {isLoading && <Loader />}
+
       {isModalOpen && (
         <Modal onClose={closeModal}>
           <NoteForm onClose={closeModal} currentQuery={query} />
