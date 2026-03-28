@@ -8,8 +8,8 @@ import ErrorMessage from '../ErrorMessage/ErrorMessage';
 import Loader from '../Loader/Loader';
 import Modal from '../Modal/Modal';
 import NoteForm from '../NoteForm/NoteForm';
-import { fetchNotes, deleteNote } from '../../services/noteService';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { fetchNotes } from '../../services/noteService';
+import { useQuery } from '@tanstack/react-query';
 import { keepPreviousData } from '@tanstack/react-query';
 import { useDebouncedCallback } from 'use-debounce';
 
@@ -18,11 +18,10 @@ export default function App() {
     const savedQuery = localStorage.getItem('query');
     return savedQuery ? JSON.parse(savedQuery) : '';
   });
+
   const [totalPages, setTotalPages] = useState<number>(1);
   const [page, setPage] = useState<number>(1);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
-
-  const queryClient = useQueryClient();
 
   const {
     data: dataNotes,
@@ -36,19 +35,6 @@ export default function App() {
       return notes;
     },
     placeholderData: keepPreviousData,
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: deleteNote,
-    onSuccess: () => {
-      toast.success('Delete success!');
-      queryClient.invalidateQueries({
-        queryKey: ['notes', query, page],
-      });
-    },
-    onError: (error: Error) => {
-      toast.error(error.message);
-    },
   });
 
   useEffect(() => {
@@ -83,12 +69,7 @@ export default function App() {
         </button>
       </header>
 
-      {dataNotes && dataNotes.length > 0 && (
-        <NoteList
-          notes={dataNotes}
-          onDelete={id => deleteMutation.mutate(id)}
-        />
-      )}
+      {dataNotes && dataNotes.length > 0 && <NoteList notes={dataNotes} />}
 
       <Toaster />
       {isError && <ErrorMessage />}
