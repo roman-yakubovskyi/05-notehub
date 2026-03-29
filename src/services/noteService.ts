@@ -45,7 +45,6 @@ export async function fetchNotes(
 export async function deleteNote(
   noteId: string
 ): Promise<DeleteNotesHttpResponse> {
-  // ✅ довіряємо TypeScript (noteId: string)
   const url = `${BASE_URL}/${noteId}`;
 
   const response = await axios.delete<DeleteNotesHttpResponse>(url, {
