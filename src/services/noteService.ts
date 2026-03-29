@@ -10,6 +10,7 @@ interface GetNotesHttpResponse {
   notes: Note[];
   totalPages: number;
 }
+
 type DeleteNotesHttpResponse = Note;
 type PostNotesHttpResponse = Note;
 
@@ -19,18 +20,22 @@ export async function fetchNotes(
 ): Promise<GetNotesHttpResponse> {
   const url = BASE_URL;
 
-  const options = {
+  const params: Record<string, string | number> = {
+    page: pageCurrent,
+    perPage: 12,
+  };
+
+  if (nameSearch.trim() !== '') {
+    params.search = nameSearch;
+  }
+
+  const response = await axios.get<GetNotesHttpResponse>(url, {
     headers: {
       Authorization: myAuthorization,
     },
-    params: {
-      search: nameSearch,
-      page: pageCurrent,
-      perPage: 12,
-    },
-  };
+    params,
+  });
 
-  const response = await axios.get<GetNotesHttpResponse>(url, options);
   return {
     notes: response.data.notes,
     totalPages: response.data.totalPages,
@@ -40,22 +45,16 @@ export async function fetchNotes(
 export async function deleteNote(
   noteId: string
 ): Promise<DeleteNotesHttpResponse> {
-  let url = BASE_URL;
-  if (noteId !== '') {
-    url = url + `/${noteId}`;
+  // ✅ довіряємо TypeScript (noteId: string)
+  const url = `${BASE_URL}/${noteId}`;
 
-    const options = {
-      headers: {
-        Authorization: myAuthorization,
-      },
-    };
+  const response = await axios.delete<DeleteNotesHttpResponse>(url, {
+    headers: {
+      Authorization: myAuthorization,
+    },
+  });
 
-    const response = await axios.delete<DeleteNotesHttpResponse>(url, options);
-
-    return response.data;
-  } else {
-    throw new Error('Note ID is required for deletion');
-  }
+  return response.data;
 }
 
 export async function createNote(
@@ -63,18 +62,11 @@ export async function createNote(
 ): Promise<PostNotesHttpResponse> {
   const url = BASE_URL;
 
-  const options = {
+  const response = await axios.post<PostNotesHttpResponse>(url, noteCreate, {
     headers: {
-      // accept: 'application/json',
       Authorization: myAuthorization,
     },
-  };
-
-  const response = await axios.post<PostNotesHttpResponse>(
-    url,
-    noteCreate,
-    options
-  );
+  });
 
   return response.data;
 }
